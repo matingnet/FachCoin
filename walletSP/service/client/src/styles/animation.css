@@ -1,0 +1,36 @@
+/* styles.css */
+
+/* Typewriter and Glitch Effect for the Title */
+.glitch-text {
+    animation: glitch 2.5s steps(20, end), typewriter 3s steps(30, end);
+    white-space: nowrap;
+    overflow: hidden;
+    border-right: 0.15em solid #00ff00; /* Blinking cursor effect */
+  }
+  
+  /* Transition to Normal Text */
+  .normal-text {
+    animation: none;
+    border-right: none;
+  }
+  
+  /* Keyframes for the Typewriter Effect */
+  @keyframes typewriter {
+    0% { width: 0; }
+    100% { width: 100%; }
+  }
+  
+  /* Keyframes for the Glitch Effect */
+  @keyframes glitch {
+    0%, 100% { transform: translate(0); }
+    10% { transform: translate(-1px, 1px); }
+    20% { transform: translate(-2px, -2px); }
+    30% { transform: translate(2px, 2px); }
+    40% { transform: translate(1px, -1px); }
+    50% { transform: translate(-1px, -1px); }
+    60% { transform: translate(1px, 1px); }
+    70% { transform: translate(-1px, 1px); }
+    80% { transform: translate(2px, -2px); }
+    90% { transform: translate(-2px, 2px); }
+  }
+  

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MemPool</title>
+    <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        /* Terminal-like styles */
+        body {
+            background-color: #1a1a1a;
+            color: #33ff33;
+            font-family: monospace;
+        }
+        .terminal-header {
+            color: #33ff33;
+            padding: 0.5rem;
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-align: center;
+        }        
+        .transaction-list {
+            border: 1px solid #444;
+            padding: 1rem;
+            background-color: #121212;
+        }
+        .transaction-item {
+            opacity: 0;
+            transform: translateY(10px);
+            animation: fadeSlideIn 0.3s forwards;
+        }
+        @keyframes fadeSlideIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .hidden-info {
+            display: none;
+        }
+        .text-title {
+            color: #33ff33;
+        }
+        .text-value {
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body class="p-6">
+
+    <div class="terminal-header">MemPool - Pending Transactions</div>
+    <div id="transaction-list" class="transaction-list mt-4 space-y-2 rounded-lg"></div>
+    
+    <script>
+        // Connect to the Socket.IO server
+        const socket = io();
+
+        socket.on("connect", () => {
+            console.log("Connected to the server.");
+        });
+
+        socket.on("connect_error", (error) => {
+            console.error("Connection failed:", error.message);
+        });
+
+        socket.on("disconnect", () => {
+            console.log("Disconnected from the server.");
+        });
+
+        // Utility function to format time
+        function formatTimeStamp(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleString();
+        }
+
+        // Utility function to truncate address
+        function truncateAddress(address) {
+            return `${address.slice(0, 6)}...${address.slice(-4)}`;
+        }
+
+        function displayTransaction(transactionStr, type) {
+            const transaction = JSON.parse(transactionStr);
+            const { id, amount, from, to, timeStamp } = transaction.payload;
+            const signature = transaction.signature;
+
+            const transactionList = document.getElementById("transaction-list");
+            const transactionItem = document.createElement("div");
+            transactionItem.className = `transaction-item p-4 bg-black rounded-lg border border-gray-700 address_${id}`;
+
+            transactionItem.innerHTML = `
+                <div><span class="text-title">ID:</span> <span class="text-value">${id}</span></div>
+                <div>
+                    <span class="text-title">From:</span>
+                    <span class="text-value address" onclick="toggleFullAddress(this)" data-full="${from}">${truncateAddress(from)}</span>
+                    <span class="text-title font-bold text-lg mx-2">➔</span>
+                    <span class="text-title">To:</span>
+                    <span class="text-value address" onclick="toggleFullAddress(this)" data-full="${to}">${truncateAddress(to)}</span>
+                </div>
+                <div><span class="text-title">Amount:</span> <span class="text-value">${amount}</span></div>
+                <button onclick="toggleInfo(this)" class="mt-2 px-3 py-1 bg-gray-700 rounded text-green-400 hover:bg-gray-600">More Info</button>
+                <div class="hidden-info mt-2">
+                    <div><span class="text-title">Timestamp:</span> <span class="text-value">${formatTimeStamp(timeStamp)}</span></div>
+                    <div>
+                        <span class="text-title">Signature:</span> 
+                        <span class="text-value signature" onclick="toggleFullSignature(this)" data-full="${signature}">
+                            ${signature.slice(0, 50)}...
+                        </span>
+                    </div>
+                </div>
+            `;
+
+            transactionList.appendChild(transactionItem);
+        }
+
+        function removeTransaction(transactionStr, type) {
+            const transaction = JSON.parse(transactionStr);
+            const { id } = transaction.payload;
+            const transactionDOM = document.getElementsByClassName(`address_${id}`)[0];
+            const transactionList = document.getElementById("transaction-list");
+            if (transactionDOM) {
+                transactionList.removeChild(transactionDOM);
+            }
+        }
+
+        function toggleInfo(button) {
+            const hiddenInfo = button.nextElementSibling;
+            if (hiddenInfo.style.display === "none" || hiddenInfo.style.display === "") {
+                hiddenInfo.style.display = "block";
+                button.textContent = "Hide Info";
+            } else {
+                hiddenInfo.style.display = "none";
+                button.textContent = "More Info";
+            }
+        }
+
+        function toggleFullAddress(element) {
+            const isTruncated = element.innerText.includes("...");
+            element.innerText = isTruncated ? element.getAttribute("data-full") : truncateAddress(element.getAttribute("data-full"));
+        }
+
+        function toggleFullSignature(element) {
+            const fullSignature = element.getAttribute("data-full");
+            const isTruncated = element.innerText.includes("...");
+            element.innerText = isTruncated ? fullSignature : `${fullSignature.slice(0, 50)}...`;
+        }
+
+        socket.on("alltransactions", (transactions) => {
+            const transactionList = document.getElementById("transaction-list");
+            transactionList.innerHTML = "";
+            transactions.forEach(transactionStr => {
+                displayTransaction(transactionStr, "All");
+            });
+        });
+
+        socket.on("transactionAdded", (transactionStr) => {
+            console.log("Transaction added:", transactionStr);
+            displayTransaction(transactionStr, "Added");
+        });
+
+        socket.on("transactionRemoved", (transactionStr) => {
+            removeTransaction(transactionStr, "Removed");
+        });
+    </script>
+</body>
+</html>
